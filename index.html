@@ -1,9 +1,54 @@
  (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
 diff --git a/index.html b/index.html
-index e0a662fddc38b40f2e759b43740cadb10f17e840..5badab453ba20b91bb0b3fff9165f8a9db58ac27 100644
+index e0a662fddc38b40f2e759b43740cadb10f17e840..6ab36cf923dd69ffd43a65aea3ebb8ecb850c70a 100644
 --- a/index.html
 +++ b/index.html
-@@ -750,51 +750,51 @@ function ProfileView({profile,onSave}){
+@@ -712,89 +712,96 @@ function JournalView({userName}){
+             <div style={{width:32,height:3,background:"var(--border)",borderRadius:2,margin:"0 auto 16px"}}/>
+             <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:19,marginBottom:16}}>Nouvelle séance 💪</div>
+             <Field label="Type">{<div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORT_CATS.map(c=><Btn key={c.id} active={form.cat===c.id} color={c.c} onClick={()=>setForm(f=>({...f,cat:c.id}))}>{c.i} {c.l}</Btn>)}</div>}</Field>
+             <Field label="Date"><FInput type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field>
+             <Field label={`Durée : ${form.duree} min`}><input type="range" min={5} max={120} step={5} value={form.duree} onChange={e=>setForm(f=>({...f,duree:parseInt(e.target.value)}))} style={{width:"100%",accentColor:"var(--orange)"}}/></Field>
+             <Field label={`Intensité : ${form.intensite}/10`}><div style={{display:"flex",gap:4}}>{Array.from({length:10},(_,i)=>i+1).map(n=><button key={n} onClick={()=>setForm(f=>({...f,intensite:n}))} style={{flex:1,height:30,borderRadius:7,border:"none",background:n<=form.intensite?"var(--orange)":"var(--border)",color:n<=form.intensite?"#fff":"var(--muted)",fontSize:11,fontWeight:700}}>{n}</button>)}</div></Field>
+             <Field label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="PR, sensations..." rows={2} style={{width:"100%",padding:"10px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:12,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
+             <div style={{display:"flex",gap:8}}>
+               <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:12,border:"1.5px solid var(--border)",borderRadius:13,color:"var(--muted)",fontSize:13,background:"transparent"}}>Annuler</button>
+               <button onClick={add} style={{flex:2,padding:12,background:"var(--orange)",border:"none",borderRadius:13,color:"#fff",fontWeight:700,fontSize:14,fontFamily:"var(--font-d)"}}>Enregistrer ✓</button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
+ 
+ /* ─── PROFILE ─── */
+ function ProfileView({profile,onSave}){
+   const [form,setForm]=useState(profile||{});
+   const [step,setStep]=useState(0);
+   const [saved,setSaved]=useState(false);
+   const set=k=>v=>setForm(f=>({...f,[k]:v}));
+   const score=profileScore(form);
++  const toggleContrainteTag=(tagId)=>{
++    setForm(f=>{
++      const current=f.contrainteTags||[];
++      const hasTag=current.includes(tagId);
++      return {...f,contrainteTags:hasTag?current.filter(x=>x!==tagId):[...current,tagId]};
++    });
++  };
+   const handleSave=()=>{
+     const tags=(form.contrainteTags||[]).map(id=>MEDIC.find(m=>m.id===id)?.n||id);
+     const final={...form,contraintes:[...tags,form.contraintesLibre||""].filter(Boolean).join(", ")};
+     saveProf(final);onSave(final);setSaved(true);setTimeout(()=>setSaved(false),2500);
+   };
+   const steps=[{t:"Identité",i:"👤"},{t:"Santé",i:"🏥"},{t:"Sport",i:"💪"},{t:"Objectif",i:"🎯"},{t:"Nutrition",i:"🥗"}];
+   return(
+     <div style={{height:"100%",display:"flex",flexDirection:"column",background:"var(--bg)",position:"relative"}}>
+       <div className="organic-bg"/>
+       <div style={{padding:"14px 18px 8px",position:"relative",zIndex:1}}>
+         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+           <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:20}}>Mon <span style={{color:"var(--accent)"}}>Profil</span></div>
+           <div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:14,color:score>=80?"var(--accent)":score>=50?"#8a6200":"var(--orange)"}}>{score}% complet</div>
          </div>
          {/* Progress bar */}
          <div style={{height:6,background:"var(--border)",borderRadius:3,marginTop:8,overflow:"hidden"}}>
@@ -30,7 +75,7 @@ index e0a662fddc38b40f2e759b43740cadb10f17e840..5badab453ba20b91bb0b3fff9165f8a9
            <Field label="Blessures & limitations" hint="Le coach adapte tous les exercices"><textarea value={form.blessures||""} onChange={e=>set("blessures")(e.target.value)} rows={3} placeholder="Ex: Genou droit opéré 2022, hernie L4-L5..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
            <Field label="⚠️ Contraintes médicales" hint="Chaque séance sera adaptée">
 -            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>setForm(f=>({...f,contrainteTags:a?(f.contrainteTags||[]).filter(x=>x!==tag.id):[...(f.contrainteTags||[]),tag.id]})))}>{tag.l}</Btn>;})}</div>
-+            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>setForm(f=>({...f,contrainteTags:a?(f.contrainteTags||[]).filter(x=>x!==tag.id):[...(f.contrainteTags||[]),tag.id]}))}>{tag.l}</Btn>;})}</div>
++            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>toggleContrainteTag(tag.id)}>{tag.l}</Btn>;})}</div>
              <textarea value={form.contraintesLibre||""} onChange={e=>setForm(f=>({...f,contraintesLibre:e.target.value}))} rows={2} placeholder="Autres : thyroïde, grossesse, cancer..." style={{width:"100%",padding:"11px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:12,lineHeight:1.6}}/>
              {((form.contrainteTags||[]).length>0||form.contraintesLibre)&&<div style={{marginTop:7,padding:"7px 11px",background:"rgba(212,160,23,0.08)",borderRadius:9,border:"1px solid rgba(212,160,23,0.18)",fontSize:11,color:"#8a6200"}}>✅ Profil médical actif</div>}
            </Field>
