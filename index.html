@@ -1,0 +1,326 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
+  <meta name="theme-color" content="#075E54" />
+  <title>Yogi Fitness 🧘</title>
+  <script src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <style>
+    * { margin:0; padding:0; box-sizing:border-box; }
+    body { font-family:'Segoe UI',system-ui,sans-serif; background:#ECE5DD; }
+    @keyframes bounce { 0%,80%,100%{transform:translateY(0)} 40%{transform:translateY(-6px)} }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    textarea { resize:none; font-family:inherit; }
+    textarea:focus { outline:none; }
+    button { font-family:inherit; cursor:pointer; }
+    ::-webkit-scrollbar { width:3px; }
+    ::-webkit-scrollbar-thumb { background:rgba(0,0,0,0.15); border-radius:4px; }
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const { useState, useRef, useEffect } = React;
+
+// ── CONFIG ──
+const API_KEY = "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";
+
+const callAI = async (messages, system) => {
+  const res = await fetch("https://api.anthropic.com/v1/messages", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "x-api-key": API_KEY,
+      "anthropic-version": "2023-06-01",
+      "anthropic-dangerous-direct-browser-access": "true"
+    },
+    body: JSON.stringify({
+      model: "claude-haiku-4-5-20251001",
+      max_tokens: 1024,
+      system,
+      messages
+    })
+  });
+  if (!res.ok) {
+    const err = await res.json().catch(()=>({}));
+    throw new Error(err.error?.message || res.status);
+  }
+  const data = await res.json();
+  return data.content?.map(b => b.text || "").join("\n") || "Erreur.";
+};
+
+// ── DONNÉES ──
+const PLANS = [
+  { id:"starter", name:"Starter", price:"9€/mois", color:"#6c757d", icon:"🌱", features:["Chat illimité","Programmes fitness","Recettes basiques"] },
+  { id:"premium", name:"Premium", price:"29€/mois", color:"#FF6B35", icon:"⭐", popular:true, features:["Tout Starter +","Données santé IA","Recettes + macros","Ayurvéda avancé"] },
+  { id:"pro", name:"Pro Coach", price:"79€/mois", color:"#6f42c1", icon:"👑", features:["Tout Premium +","Multi-clients","Backoffice coach","Export PDF"] }
+];
+
+const SYSTEM = `Tu es Yogi Fitness, un coach de santé holistique expert, bienveillant et motivant.
+
+LANGUE : Détecte automatiquement la langue du client et réponds TOUJOURS dans cette langue. Français, anglais, arabe, espagnol, hindi — adapte-toi naturellement.
+
+Expertises :
+1. FITNESS : programmes sur mesure selon contraintes mécaniques (blessures), logistiques (équipement), temporelles (temps dispo)
+2. NUTRITION : recettes avec calcul des macros (protéines / glucides / lipides / calories par portion)
+3. AYURVEDA : remèdes maison, doshas (Vata/Pitta/Kapha), plantes médicinales, équilibre énergétique
+
+RÈGLE MÉDICALE ABSOLUE : Pour toute question médicale, diagnostic, médicaments ou symptômes → dis toujours "Pour cette question, consulte ton médecin. Je t'aide à optimiser nutrition et exercices en complément." Ne joue jamais au médecin.
+
+STYLE : Chaleureux, motivant, précis. Réponds de façon pratique et actionnable. Utilise des emojis avec parcimonie.`;
+
+const ft = () => new Date().toLocaleTimeString("fr-FR", { hour:"2-digit", minute:"2-digit" });
+const fd = () => new Date().toLocaleDateString("fr-FR");
+
+// ── COMPOSANTS ──
+const Badge = ({ color, children }) => (
+  <span style={{ background:color+"22", color, border:`1px solid ${color}44`, borderRadius:20, padding:"2px 10px", fontSize:11, fontWeight:600 }}>{children}</span>
+);
+
+const Dots = () => (
+  <div style={{ display:"flex", gap:5, padding:"12px 16px", background:"#fff", borderRadius:"18px 18px 18px 4px", boxShadow:"0 1px 3px rgba(0,0,0,0.1)" }}>
+    {[0,1,2].map(i => <div key={i} style={{ width:8, height:8, borderRadius:"50%", background:"#128C7E", animation:"bounce 1.2s infinite", animationDelay:`${i*0.2}s` }} />)}
+  </div>
+);
+
+const Bubble = ({ msg }) => {
+  const u = msg.role === "user";
+  return (
+    <div style={{ display:"flex", justifyContent:u?"flex-end":"flex-start", margin:"3px 14px" }}>
+      {!u && <div style={{ width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg,#25D366,#128C7E)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16, marginRight:8, alignSelf:"flex-end", flexShrink:0 }}>🧘</div>}
+      <div style={{ maxWidth:"76%" }}>
+        <div style={{ background:u?"#DCF8C6":"#fff", borderRadius:u?"18px 18px 4px 18px":"18px 18px 18px 4px", padding:"10px 13px", boxShadow:"0 1px 3px rgba(0,0,0,0.1)", fontSize:14, lineHeight:1.6, color:"#1a1a1a", whiteSpace:"pre-wrap" }}>
+          {msg.content}
+          {msg.isHealth && <div style={{ marginTop:8, padding:"6px 10px", background:"#fff3cd", borderRadius:8, fontSize:12, color:"#856404" }}>⚕️ Données santé analysées</div>}
+        </div>
+        <div style={{ fontSize:11, color:"#999", marginTop:2, textAlign:u?"right":"left" }}>{msg.time}{u&&" ✓✓"}</div>
+      </div>
+    </div>
+  );
+};
+
+// ── CHAT ──
+function ChatView({ userName, onBack }) {
+  const [msgs, setMsgs] = useState([]);
+  const [input, setInput] = useState("");
+  const [typing, setTyping] = useState(false);
+  const [hist, setHist] = useState([]);
+  const [showUpload, setShowUpload] = useState(false);
+  const [uploadTxt, setUploadTxt] = useState("");
+  const endRef = useRef(null);
+  const inputRef = useRef(null);
+
+  useEffect(() => {
+    setTimeout(() => {
+      const g = { role:"assistant", content:`Namasté ${userName} 🙏\n\nRavi de te rencontrer ! Je suis ton coach Yogi Fitness.\n\nJe suis là pour :\n💪 Créer ton programme fitness sur mesure\n🥗 Cuisiner avec tes ingrédients & calculer tes macros\n🌿 Partager les secrets de l'ayurvéda\n\nComment puis-je t'aider aujourd'hui ?`, time:ft() };
+      setMsgs([g]);
+      setHist([{ role:"assistant", content:g.content }]);
+    }, 400);
+  }, []);
+
+  useEffect(() => { endRef.current?.scrollIntoView({ behavior:"smooth" }); }, [msgs, typing]);
+
+  const send = async (text) => {
+    const txt = text || input.trim();
+    if (!txt || typing) return;
+    setInput("");
+    if (inputRef.current) inputRef.current.style.height = "auto";
+    const uMsg = { role:"user", content:txt, time:ft() };
+    const newMsgs = [...msgs, uMsg];
+    const newHist = [...hist, { role:"user", content:txt }];
+    setMsgs(newMsgs); setHist(newHist); setTyping(true);
+    try {
+      const reply = await callAI(newHist, SYSTEM);
+      const aMsg = { role:"assistant", content:reply, time:ft() };
+      setMsgs([...newMsgs, aMsg]);
+      setHist([...newHist, { role:"assistant", content:reply }]);
+    } catch(e) {
+      setMsgs(p => [...p, { role:"assistant", content:"❌ Erreur de connexion. Vérifie ta connexion internet et réessaie.", time:ft() }]);
+    }
+    setTyping(false);
+  };
+
+  const sendHealth = async () => {
+    if (!uploadTxt.trim()) return;
+    setShowUpload(false);
+    const uMsg = { role:"user", content:"📋 J'ai de nouvelles données santé à partager avec toi.", time:ft() };
+    const newMsgs = [...msgs, uMsg];
+    const newHist = [...hist, { role:"user", content:`[DONNÉES SANTÉ DU CLIENT]\n${uploadTxt}\n\nAnalyse ces données et adapte tes recommandations fitness et nutrition en conséquence. Pour toute interprétation médicale, renvoie vers le médecin.` }];
+    setMsgs(newMsgs); setHist(newHist); setTyping(true);
+    try {
+      const reply = await callAI(newHist, SYSTEM);
+      setMsgs([...newMsgs, { role:"assistant", content:reply, time:ft(), isHealth:true }]);
+      setHist([...newHist, { role:"assistant", content:reply }]);
+    } catch {}
+    setTyping(false); setUploadTxt("");
+  };
+
+  const QUICK = ["💪 Crée mon programme fitness","🥗 Recette avec mes ingrédients","🌿 Remède ayurvédique","📊 Calcule mes macros","🧘 Programme mobilité","🌱 Quel est mon dosha ?"];
+
+  return (
+    <div style={{ display:"flex", flexDirection:"column", height:"100%", background:"#ECE5DD", position:"relative" }}>
+
+      {/* Header */}
+      <div style={{ background:"linear-gradient(135deg,#075E54,#128C7E)", padding:"10px 14px", display:"flex", alignItems:"center", gap:10, flexShrink:0 }}>
+        <button onClick={onBack} style={{ background:"none", border:"none", color:"#a8e6cf", fontSize:22, padding:0, lineHeight:1 }}>←</button>
+        <div style={{ width:40, height:40, borderRadius:"50%", background:"rgba(255,255,255,0.2)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:22, flexShrink:0 }}>🧘</div>
+        <div style={{ flex:1 }}>
+          <div style={{ color:"#fff", fontWeight:700, fontSize:15 }}>Yogi Fitness</div>
+          <div style={{ color:"#a8e6cf", fontSize:11, display:"flex", alignItems:"center", gap:4 }}>
+            <span style={{ width:6, height:6, borderRadius:"50%", background:"#25D366", display:"inline-block" }}/>
+            en ligne · 🌍 Multilingue
+          </div>
+        </div>
+        <button onClick={()=>setShowUpload(true)} style={{ background:"rgba(255,255,255,0.15)", border:"none", color:"#fff", borderRadius:20, padding:"6px 12px", fontSize:12 }}>📋 Santé</button>
+      </div>
+
+      {/* Langue banner */}
+      <div style={{ background:"rgba(37,211,102,0.15)", borderBottom:"1px solid rgba(37,211,102,0.25)", padding:"5px 14px", flexShrink:0 }}>
+        <span style={{ fontSize:11, color:"#075E54", fontWeight:500 }}>🌍 Écris dans ta langue · Write in your language · اكتب بلغتك · Escribe en tu idioma</span>
+      </div>
+
+      {/* Modal santé */}
+      {showUpload && (
+        <div style={{ position:"absolute", inset:0, background:"rgba(0,0,0,0.6)", zIndex:100, display:"flex", alignItems:"center", justifyContent:"center", padding:16 }}>
+          <div style={{ background:"#fff", borderRadius:20, padding:20, width:"100%", maxWidth:420, boxShadow:"0 20px 60px rgba(0,0,0,0.3)" }}>
+            <div style={{ fontSize:28, marginBottom:8, textAlign:"center" }}>📋</div>
+            <h3 style={{ margin:"0 0 6px", fontSize:17, textAlign:"center" }}>Partager des données santé</h3>
+            <p style={{ fontSize:12, color:"#666", margin:"0 0 14px", textAlign:"center" }}>Bilan sanguin, IRM, résultats d'analyses...</p>
+            <textarea value={uploadTxt} onChange={e=>setUploadTxt(e.target.value)}
+              placeholder="Ex: Bilan du 01/03/2025&#10;Ferritine: 45 µg/L&#10;Vitamine D: 32 ng/mL&#10;Glycémie: 0.92 g/L..."
+              style={{ width:"100%", height:130, border:"1px solid #ddd", borderRadius:10, padding:12, fontSize:13, lineHeight:1.5 }} />
+            <div style={{ display:"flex", gap:8, marginTop:12 }}>
+              <button onClick={()=>setShowUpload(false)} style={{ flex:1, padding:11, border:"1px solid #ddd", borderRadius:10, background:"#f5f5f5", fontSize:14 }}>Annuler</button>
+              <button onClick={sendHealth} style={{ flex:2, padding:11, border:"none", borderRadius:10, background:"linear-gradient(135deg,#25D366,#128C7E)", color:"#fff", fontWeight:700, fontSize:14 }}>Analyser ✓</button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Messages */}
+      <div style={{ flex:1, overflowY:"auto", padding:"10px 0" }}>
+        <div style={{ textAlign:"center", margin:"6px 0 12px" }}>
+          <span style={{ background:"rgba(255,255,255,0.85)", fontSize:11, color:"#666", padding:"4px 12px", borderRadius:12, boxShadow:"0 1px 2px rgba(0,0,0,0.08)" }}>{fd()}</span>
+        </div>
+
+        {msgs.map((m,i) => <Bubble key={i} msg={m} />)}
+
+        {typing && (
+          <div style={{ display:"flex", alignItems:"center", gap:8, margin:"3px 14px" }}>
+            <div style={{ width:32, height:32, borderRadius:"50%", background:"linear-gradient(135deg,#25D366,#128C7E)", display:"flex", alignItems:"center", justifyContent:"center", fontSize:16 }}>🧘</div>
+            <Dots />
+          </div>
+        )}
+
+        {msgs.length <= 1 && !typing && (
+          <div style={{ padding:"10px 14px" }}>
+            <p style={{ fontSize:12, color:"#888", marginBottom:8, textAlign:"center" }}>Suggestions rapides :</p>
+            <div style={{ display:"flex", flexWrap:"wrap", gap:7 }}>
+              {QUICK.map((q,i) => (
+                <button key={i} onClick={()=>send(q)} style={{ background:"rgba(255,255,255,0.92)", border:"1px solid rgba(18,140,126,0.3)", borderRadius:20, padding:"7px 13px", fontSize:12, color:"#075E54", fontWeight:500, transition:"all 0.15s" }}>
+                  {q}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+        <div ref={endRef} />
+      </div>
+
+      {/* Input */}
+      <div style={{ background:"#F0F0F0", padding:"8px 10px", display:"flex", alignItems:"flex-end", gap:8, flexShrink:0 }}>
+        <div style={{ flex:1, background:"#fff", borderRadius:24, display:"flex", alignItems:"flex-end", padding:"8px 14px", boxShadow:"0 1px 4px rgba(0,0,0,0.1)", gap:8 }}>
+          <span style={{ fontSize:20, paddingBottom:2 }}>😊</span>
+          <textarea ref={inputRef} value={input} onChange={e=>setInput(e.target.value)}
+            onKeyDown={e=>{ if(e.key==="Enter"&&!e.shiftKey){e.preventDefault();send();} }}
+            placeholder="Message / رسالة / Mensaje / संदेश..." rows={1}
+            style={{ flex:1, border:"none", fontSize:15, background:"transparent", maxHeight:120, lineHeight:1.4, paddingTop:2 }}
+            onInput={e=>{ e.target.style.height="auto"; e.target.style.height=Math.min(e.target.scrollHeight,120)+"px"; }} />
+        </div>
+        <button onClick={()=>send()} disabled={!input.trim()||typing}
+          style={{ width:46, height:46, borderRadius:"50%", border:"none", background:input.trim()&&!typing?"linear-gradient(135deg,#25D366,#128C7E)":"#C5C5C5", color:"#fff", fontSize:20, flexShrink:0, display:"flex", alignItems:"center", justifyContent:"center", boxShadow:input.trim()&&!typing?"0 3px 10px rgba(37,211,102,0.4)":"none", transition:"all 0.2s" }}>
+          {typing ? <div style={{ width:18, height:18, border:"2px solid #fff", borderTopColor:"transparent", borderRadius:"50%", animation:"spin 0.8s linear infinite" }}/> : "➤"}
+        </button>
+      </div>
+    </div>
+  );
+}
+
+// ── ONBOARDING ──
+function Onboarding({ onDone }) {
+  const [name, setName] = useState("");
+  const [step, setStep] = useState(0);
+
+  const emojis = ["🌱","⭐","💪","🧘","🌿","🥗"];
+  const [emoji, setEmoji] = useState("🧘");
+
+  if (step === 0) return (
+    <div style={{ height:"100%", background:"linear-gradient(160deg,#0a1628 0%,#0d2137 50%,#0a2e1e 100%)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:30, textAlign:"center" }}>
+      <div style={{ fontSize:70, marginBottom:16, filter:"drop-shadow(0 4px 20px rgba(37,211,102,0.4))" }}>🧘</div>
+      <h1 style={{ color:"#fff", fontSize:32, fontWeight:900, margin:"0 0 8px", letterSpacing:-0.5 }}>Yogi Fitness</h1>
+      <p style={{ color:"#25D366", fontSize:13, margin:"0 0 8px", letterSpacing:2, textTransform:"uppercase", fontWeight:600 }}>Coach holistique IA</p>
+      <p style={{ color:"#a8e6cf", fontSize:13, margin:"0 0 40px" }}>🌍 Français · English · Español · العربية · हिंदी</p>
+
+      <div style={{ display:"flex", gap:16, marginBottom:40 }}>
+        {["💪 Fitness","🥗 Nutrition","🌿 Ayurvéda"].map((t,i)=>(
+          <div key={i} style={{ background:"rgba(255,255,255,0.07)", borderRadius:14, padding:"14px 10px", border:"1px solid rgba(255,255,255,0.12)", flex:1 }}>
+            <div style={{ color:"#fff", fontSize:13, fontWeight:600 }}>{t}</div>
+          </div>
+        ))}
+      </div>
+
+      <button onClick={()=>setStep(1)} style={{ width:"100%", padding:16, background:"linear-gradient(135deg,#25D366,#128C7E)", border:"none", borderRadius:14, color:"#fff", fontWeight:700, fontSize:16, boxShadow:"0 4px 20px rgba(37,211,102,0.4)", marginBottom:12 }}>
+        Commencer gratuitement →
+      </button>
+      <p style={{ color:"#666", fontSize:11 }}>Aucune inscription requise · Données privées</p>
+    </div>
+  );
+
+  return (
+    <div style={{ height:"100%", background:"linear-gradient(160deg,#0a1628,#0a2e1e)", display:"flex", flexDirection:"column", alignItems:"center", justifyContent:"center", padding:30 }}>
+      <div style={{ fontSize:60, marginBottom:20 }}>{emoji}</div>
+      <h2 style={{ color:"#fff", fontSize:22, fontWeight:700, margin:"0 0 8px", textAlign:"center" }}>Comment tu t'appelles ?</h2>
+      <p style={{ color:"#a8e6cf", fontSize:14, margin:"0 0 30px", textAlign:"center" }}>Je personnaliserai ton coaching</p>
+
+      <div style={{ display:"flex", gap:10, marginBottom:20 }}>
+        {emojis.map(e => <button key={e} onClick={()=>setEmoji(e)} style={{ fontSize:26, background:emoji===e?"rgba(37,211,102,0.2)":"rgba(255,255,255,0.06)", border:emoji===e?"2px solid #25D366":"2px solid transparent", borderRadius:12, padding:"8px 10px", cursor:"pointer" }}>{e}</button>)}
+      </div>
+
+      <input value={name} onChange={e=>setName(e.target.value)}
+        onKeyDown={e=>e.key==="Enter"&&name.trim()&&onDone(name.trim())}
+        placeholder="Ton prénom..." autoFocus
+        style={{ width:"100%", padding:16, borderRadius:14, border:"2px solid rgba(37,211,102,0.3)", background:"rgba(255,255,255,0.08)", color:"#fff", fontSize:18, textAlign:"center", marginBottom:16, outline:"none" }} />
+
+      <button onClick={()=>name.trim()&&onDone(name.trim())} disabled={!name.trim()}
+        style={{ width:"100%", padding:16, background:name.trim()?"linear-gradient(135deg,#25D366,#128C7E)":"#444", border:"none", borderRadius:14, color:"#fff", fontWeight:700, fontSize:16, transition:"all 0.2s" }}>
+        Allons-y ! 🚀
+      </button>
+    </div>
+  );
+}
+
+// ── APP ──
+function App() {
+  const [screen, setScreen] = useState("onboarding"); // onboarding | chat
+  const [userName, setUserName] = useState("");
+
+  if (screen === "onboarding") return (
+    <div style={{ height:"100vh", maxWidth:480, margin:"0 auto", overflow:"hidden" }}>
+      <Onboarding onDone={(name)=>{ setUserName(name); setScreen("chat"); }} />
+    </div>
+  );
+
+  return (
+    <div style={{ height:"100vh", maxWidth:480, margin:"0 auto", overflow:"hidden" }}>
+      <ChatView userName={userName} onBack={()=>setScreen("onboarding")} />
+    </div>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById("root")).render(<App />);
+</script>
+</body>
+</html>
