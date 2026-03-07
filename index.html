@@ -1,98 +1,131 @@
-@@ -712,89 +712,96 @@ function JournalView({userName}){
-            <div style={{width:32,height:3,background:"var(--border)",borderRadius:2,margin:"0 auto 16px"}}/>
-            <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:19,marginBottom:16}}>Nouvelle séance 💪</div>
-            <Field label="Type">{<div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORT_CATS.map(c=><Btn key={c.id} active={form.cat===c.id} color={c.c} onClick={()=>setForm(f=>({...f,cat:c.id}))}>{c.i} {c.l}</Btn>)}</div>}</Field>
-            <Field label="Date"><FInput type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field>
-            <Field label={`Durée : ${form.duree} min`}><input type="range" min={5} max={120} step={5} value={form.duree} onChange={e=>setForm(f=>({...f,duree:parseInt(e.target.value)}))} style={{width:"100%",accentColor:"var(--orange)"}}/></Field>
-            <Field label={`Intensité : ${form.intensite}/10`}><div style={{display:"flex",gap:4}}>{Array.from({length:10},(_,i)=>i+1).map(n=><button key={n} onClick={()=>setForm(f=>({...f,intensite:n}))} style={{flex:1,height:30,borderRadius:7,border:"none",background:n<=form.intensite?"var(--orange)":"var(--border)",color:n<=form.intensite?"#fff":"var(--muted)",fontSize:11,fontWeight:700}}>{n}</button>)}</div></Field>
-            <Field label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="PR, sensations..." rows={2} style={{width:"100%",padding:"10px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:12,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
-            <div style={{display:"flex",gap:8}}>
-              <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:12,border:"1.5px solid var(--border)",borderRadius:13,color:"var(--muted)",fontSize:13,background:"transparent"}}>Annuler</button>
-              <button onClick={add} style={{flex:2,padding:12,background:"var(--orange)",border:"none",borderRadius:13,color:"#fff",fontWeight:700,fontSize:14,fontFamily:"var(--font-d)"}}>Enregistrer ✓</button>
-            </div>
-          </div>
-        </div>
-      )}
-    </div>
-  );
-}
-
-/* ─── PROFILE ─── */
-function ProfileView({profile,onSave}){
-  const [form,setForm]=useState(profile||{});
-  const [step,setStep]=useState(0);
-  const [saved,setSaved]=useState(false);
-  const set=k=>v=>setForm(f=>({...f,[k]:v}));
-  const score=profileScore(form);
-  const toggleContrainteTag=(tagId)=>{
-    setForm(f=>{
-      const current=f.contrainteTags||[];
-      const hasTag=current.includes(tagId);
-      return {...f,contrainteTags:hasTag?current.filter(x=>x!==tagId):[...current,tagId]};
-    });
-  };
-  const handleSave=()=>{
-    const tags=(form.contrainteTags||[]).map(id=>MEDIC.find(m=>m.id===id)?.n||id);
-    const final={...form,contraintes:[...tags,form.contraintesLibre||""].filter(Boolean).join(", ")};
-    saveProf(final);onSave(final);setSaved(true);setTimeout(()=>setSaved(false),2500);
-  };
-  const steps=[{t:"Identité",i:"👤"},{t:"Santé",i:"🏥"},{t:"Sport",i:"💪"},{t:"Objectif",i:"🎯"},{t:"Nutrition",i:"🥗"}];
-  return(
-    <div style={{height:"100%",display:"flex",flexDirection:"column",background:"var(--bg)",position:"relative"}}>
-      <div className="organic-bg"/>
-      <div style={{padding:"14px 18px 8px",position:"relative",zIndex:1}}>
-        <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
-          <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:20}}>Mon <span style={{color:"var(--accent)"}}>Profil</span></div>
-          <div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:14,color:score>=80?"var(--accent)":score>=50?"#8a6200":"var(--orange)"}}>{score}% complet</div>
-        </div>
-        {/* Progress bar */}
-        <div style={{height:6,background:"var(--border)",borderRadius:3,marginTop:8,overflow:"hidden"}}>
-          <div style={{width:`${score}%`,height:"100%",background:`linear-gradient(90deg,${score>=80?"var(--accent)":score>=50?"#d4a017":"var(--orange)"},${score>=80?"var(--accent2)":score>=50?"#e9c46a":"var(--pink)"})`,borderRadius:3,transition:"width 0.8s cubic-bezier(0.16,1,0.3,1)"}}/>
-        </div>
-      </div>
-      <div style={{display:"flex",gap:5,padding:"8px 16px 12px",position:"relative",zIndex:1,overflowX:"auto"}}>
-        {steps.map((s,i)=><button key={i} onClick={()=>setStep(i)} style={{flexShrink:0,padding:"7px 10px",borderRadius:11,background:step===i?"var(--accent)":"var(--card)",color:step===i?"#fff":"var(--muted)",border:step===i?"none":"1.5px solid var(--border)",boxShadow:step===i?"0 2px 10px rgba(45,106,79,0.22)":"var(--shadow)",transition:"all 0.18s",minWidth:58}}><div style={{fontSize:15}}>{s.i}</div><div style={{fontSize:9,fontWeight:step===i?700:400,marginTop:2,fontFamily:"var(--font-d)"}}>{s.t}</div></button>)}
-      </div>
-      <div style={{flex:1,overflowY:"auto",padding:"0 18px",position:"relative",zIndex:1}}>
-        {step===0&&<div className="fade-up">
-          <Field label="Prénom"><FInput placeholder="Ton prénom" value={form.prenom||""} onChange={e=>set("prenom")(e.target.value)}/></Field>
-          <Field label="Sexe"><div style={{display:"flex",gap:8}}>{["Homme","Femme","Autre"].map(s=><Btn key={s} active={form.sexe===s} style={{flex:1,padding:"12px",borderRadius:13,fontSize:13}} onClick={()=>set("sexe")(s)}>{s}</Btn>)}</div></Field>
-          <Field label="Âge"><FInput type="number" placeholder="28" value={form.age||""} onChange={e=>set("age")(e.target.value)}/></Field>
-          <Field label="Origine / Ethnie" hint="Prédispositions génétiques et nutritionnelles"><FInput placeholder="Ex: Africaine, Asiatique, Européenne..." value={form.ethnie||""} onChange={e=>set("ethnie")(e.target.value)}/></Field>
-          <Field label="Mode de vie"><div style={{position:"relative"}}><select value={form.modVie||""} onChange={e=>set("modVie")(e.target.value)} style={{width:"100%",padding:"12px 15px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:form.modVie?"var(--text)":"var(--muted)",fontSize:14,paddingRight:34}}><option value="">Sélectionne...</option>{MODES_VIE.map(m=><option key={m} value={m}>{m}</option>)}</select><div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",fontSize:11,color:"var(--muted)"}}>▾</div></div></Field>
-        </div>}
-        {step===1&&<div className="fade-up">
-          <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
-            <Field label="Taille (cm)"><FInput type="number" placeholder="175" value={form.taille||""} onChange={e=>set("taille")(e.target.value)}/></Field>
-            <Field label="Poids (kg)"><FInput type="number" placeholder="70" value={form.poids||""} onChange={e=>set("poids")(e.target.value)}/></Field>
-          </div>
-          {form.taille&&form.poids&&(()=>{const bmi=(form.poids/((form.taille/100)**2)).toFixed(1);const c=bmi<18.5?"#52b788":bmi<25?"#2d6a4f":bmi<30?"#d4a017":"#e76f51";const l=bmi<18.5?"Maigreur":bmi<25?"Normal":bmi<30?"Surpoids":"Obésité";return<div style={{background:`${c}10`,border:`1px solid ${c}25`,borderRadius:11,padding:"9px 13px",marginBottom:14,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,color:"var(--muted)"}}>IMC</span><span style={{fontFamily:"var(--font-d)",fontWeight:700,color:c,fontSize:14}}>{bmi} — {l}</span></div>;})()}
-          <Field label="Blessures & limitations" hint="Le coach adapte tous les exercices"><textarea value={form.blessures||""} onChange={e=>set("blessures")(e.target.value)} rows={3} placeholder="Ex: Genou droit opéré 2022, hernie L4-L5..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
-          <Field label="⚠️ Contraintes médicales" hint="Chaque séance sera adaptée">
-            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>setForm(f=>({...f,contrainteTags:a?(f.contrainteTags||[]).filter(x=>x!==tag.id):[...(f.contrainteTags||[]),tag.id]})))}>{tag.l}</Btn>;})}</div>
-            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>toggleContrainteTag(tag.id)}>{tag.l}</Btn>;})}</div>
-            <textarea value={form.contraintesLibre||""} onChange={e=>setForm(f=>({...f,contraintesLibre:e.target.value}))} rows={2} placeholder="Autres : thyroïde, grossesse, cancer..." style={{width:"100%",padding:"11px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:12,lineHeight:1.6}}/>
-            {((form.contrainteTags||[]).length>0||form.contraintesLibre)&&<div style={{marginTop:7,padding:"7px 11px",background:"rgba(212,160,23,0.08)",borderRadius:9,border:"1px solid rgba(212,160,23,0.18)",fontSize:11,color:"#8a6200"}}>✅ Profil médical actif</div>}
-          </Field>
-        </div>}
-        {step===2&&<div className="fade-up">
-          <Field label="Niveau sportif"><div style={{display:"flex",flexDirection:"column",gap:7}}>{NIVEAUX.map(n=><button key={n} onClick={()=>set("niveau")(n)} style={{padding:"11px 15px",borderRadius:13,border:`1.5px solid ${form.niveau===n?"var(--accent)":"var(--border)"}`,background:form.niveau===n?"rgba(45,106,79,0.06)":"var(--bg)",color:form.niveau===n?"var(--accent)":"var(--text)",fontSize:13,fontWeight:form.niveau===n?600:400,textAlign:"left",transition:"all 0.18s"}}>{n}</button>)}</div></Field>
-          <Field label="Équipement (multi-sélection)"><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{EQUIPEMENTS.map(e=>{const s=(form.equipement||"").includes(e);return<Btn key={e} active={s} onClick={()=>{const cur=form.equipement?form.equipement.split(", ").filter(Boolean):[];set("equipement")(s?cur.filter(x=>x!==e).join(", "):[...cur,e].join(", "));}}>{e}</Btn>;})}</div></Field>
-        </div>}
-        {step===3&&<div className="fade-up">
-          <Field label="Objectif principal"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{OBJECTIFS.map(o=><button key={o.id} onClick={()=>set("objectif")(o.label)} style={{padding:"12px 10px",borderRadius:15,border:`1.5px solid ${form.objectif===o.label?"var(--accent)":"var(--border)"}`,background:form.objectif===o.label?"rgba(45,106,79,0.06)":"var(--bg)",textAlign:"left",transition:"all 0.18s"}}><div style={{fontSize:18,marginBottom:3}}>{o.label.split(" ")[0]}</div><div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:11,color:form.objectif===o.label?"var(--accent)":"var(--text)"}}>{o.label.split(" ").slice(1).join(" ")}</div><div style={{fontSize:10,color:"var(--muted)"}}>{o.sub}</div></button>)}</div></Field>
-          {form.objectif?.includes("Événement")&&<><Field label="Événement"><FInput placeholder="Mariage, compét..." value={form.evenement||""} onChange={e=>set("evenement")(e.target.value)}/></Field><Field label="Date"><FInput type="date" value={form.dateEvenement||""} onChange={e=>set("dateEvenement")(e.target.value)}/></Field></>}
-          <Field label="Précisions"><textarea value={form.objectifDetail||""} onChange={e=>set("objectifDetail")(e.target.value)} rows={3} placeholder="Ex: Perdre 8kg avant l'été..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
-        </div>}
-        {step===4&&<div className="fade-up">
-          <Field label="Régime alimentaire"><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{REGIMES.map(r=><Btn key={r} active={form.regime===r} onClick={()=>set("regime")(r)}>{r}</Btn>)}</div></Field>
-          <Field label="Allergies / intolérances"><FInput placeholder="Arachides, lactose..." value={form.allergies||""} onChange={e=>set("allergies")(e.target.value)}/></Field>
-          <Field label="Résultats biologiques" hint="Pour une nutrition sur-mesure"><textarea value={form.bilanSanguin||""} onChange={e=>set("bilanSanguin")(e.target.value)} rows={4} placeholder="Ferritine, Vit D, TSH, glycémie..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
-        </div>}
-        <div style={{height:100}}/>
-      </div>
-      <div style={{padding:"10px 18px 16px",borderTop:"1px solid var(--border)",background:"rgba(245,242,236,0.97)",backdropFilter:"blur(12px)",position:"relative",zIndex:1}}>
-        <div style={{display:"flex",gap:8,marginBottom:8}}>
-          {step>0&&<button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:12,border:"1.5px solid var(--border)",borderRadius:13,color:"var(--muted)",fontSize:13,background:"transparent"}}>← Retour</button>}
-          {step<4?<button onClick={()=>setStep(s=>s+1)} style={{flex:2,padding:12,background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:14,fontWeight:600,boxShadow:"var(--shadow)"}}>Suivant →</button>
-          :<button onClick={handleSave} style={{flex:2,padding:12,background:"var(--accent)",border:"none",borderRadius:13,color:"#fff",fontWeight:700,fontSize:15,fontFamily:"var(--font-d)",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 3px 14px rgba(45,106,79,0.3)"}}>{saved?"✅ Sauvegardé !":"Sauvegarder ✓"}</button>}
+ (cd "$(git rev-parse --show-toplevel)" && git apply --3way <<'EOF' 
+diff --git a/index.html b/index.html
+index e0a662fddc38b40f2e759b43740cadb10f17e840..4659c61471ed00e78b76c7610c56ba82f61af9b3 100644
+--- a/index.html
++++ b/index.html
+@@ -689,112 +689,119 @@ function JournalView({userName}){
+         ))}
+       </div>
+       <div style={{flex:1,overflowY:"auto",padding:"0 16px",position:"relative",zIndex:1}}>
+         {sess.length===0?<div style={{textAlign:"center",padding:"48px 20px"}}><div style={{fontSize:48,marginBottom:10}}>🏋️</div><div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:17}}>Aucune séance</div><div style={{fontSize:13,color:"var(--muted)",marginTop:4}}>Lance-toi !</div></div>:sess.map((s,i)=>(
+           <div key={s.id} className="fade-up" style={{background:"var(--card)",borderRadius:17,padding:"13px",marginBottom:9,border:"1px solid var(--border)",display:"flex",alignItems:"center",gap:11,boxShadow:"var(--shadow)",animationDelay:`${i*0.03}s`}}>
+             <div style={{width:42,height:42,borderRadius:13,background:s.color+"15",display:"flex",alignItems:"center",justifyContent:"center",fontSize:21,flexShrink:0}}>{s.icon}</div>
+             <div style={{flex:1,minWidth:0}}>
+               <div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:13}}>{s.label}</div>
+               <div style={{fontSize:11,color:"var(--muted)",marginTop:1}}>{fdS(s.date)} · {s.duree} min</div>
+               {s.notes&&<div style={{fontSize:11,color:"var(--subtle)",marginTop:1,fontStyle:"italic",overflow:"hidden",textOverflow:"ellipsis",whiteSpace:"nowrap"}}>"{s.notes}"</div>}
+             </div>
+             <div style={{display:"flex",gap:2}}>{Array.from({length:10},(_,n)=><div key={n} style={{width:3,height:11,borderRadius:2,background:n<s.intensite?s.color:"var(--border)"}}/>)}</div>
+             <button onClick={()=>del(s.id)} style={{color:"var(--border)",fontSize:17,padding:"0 0 0 4px",flexShrink:0}}>×</button>
+           </div>
+         ))}
+         <div style={{height:90}}/>
+       </div>
+       <div style={{position:"absolute",bottom:16,left:16,right:16,zIndex:10}}>
+         <button onClick={()=>setShowAdd(true)} style={{width:"100%",padding:14,background:"linear-gradient(135deg,var(--orange),#c14012)",border:"none",borderRadius:17,color:"#fff",fontWeight:700,fontSize:15,fontFamily:"var(--font-d)",boxShadow:"0 5px 20px rgba(231,111,81,0.35)"}}>+ Nouvelle séance</button>
+       </div>
+       {showAdd&&(
+         <div style={{position:"fixed",inset:0,background:"rgba(0,0,0,0.28)",zIndex:100,display:"flex",alignItems:"flex-end",justifyContent:"center",backdropFilter:"blur(8px)"}}>
+           <div className="slide-up" style={{background:"var(--bg2)",borderRadius:"22px 22px 0 0",padding:20,width:"100%",maxWidth:480,maxHeight:"88vh",overflowY:"auto",boxShadow:"var(--shadow-lg)"}}>
+             <div style={{width:32,height:3,background:"var(--border)",borderRadius:2,margin:"0 auto 16px"}}/>
+             <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:19,marginBottom:16}}>Nouvelle séance 💪</div>
+-            <Field label="Type">{<div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORT_CATS.map(c=><Btn key={c.id} active={form.cat===c.id} color={c.c} onClick={()=>setForm(f=>({...f,cat:c.id}))}>{c.i} {c.l}</Btn>)}</div>}</Field>
++            <Field label="Type"><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{SPORT_CATS.map(c=><Btn key={c.id} active={form.cat===c.id} color={c.c} onClick={()=>setForm(f=>({...f,cat:c.id}))}>{c.i} {c.l}</Btn>)}</div></Field>
+             <Field label="Date"><FInput type="date" value={form.date} onChange={e=>setForm(f=>({...f,date:e.target.value}))}/></Field>
+-            <Field label={`Durée : ${form.duree} min`}><input type="range" min={5} max={120} step={5} value={form.duree} onChange={e=>setForm(f=>({...f,duree:parseInt(e.target.value)}))} style={{width:"100%",accentColor:"var(--orange)"}}/></Field>
++            <Field label={`Durée : ${form.duree} min`}><input type="range" min={5} max={120} step={5} value={form.duree} onChange={e=>setForm(f=>({...f,duree:parseInt(e.target.value,10)}))} style={{width:"100%",accentColor:"var(--orange)"}}/></Field>
+             <Field label={`Intensité : ${form.intensite}/10`}><div style={{display:"flex",gap:4}}>{Array.from({length:10},(_,i)=>i+1).map(n=><button key={n} onClick={()=>setForm(f=>({...f,intensite:n}))} style={{flex:1,height:30,borderRadius:7,border:"none",background:n<=form.intensite?"var(--orange)":"var(--border)",color:n<=form.intensite?"#fff":"var(--muted)",fontSize:11,fontWeight:700}}>{n}</button>)}</div></Field>
+             <Field label="Notes"><textarea value={form.notes} onChange={e=>setForm(f=>({...f,notes:e.target.value}))} placeholder="PR, sensations..." rows={2} style={{width:"100%",padding:"10px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:12,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
+             <div style={{display:"flex",gap:8}}>
+               <button onClick={()=>setShowAdd(false)} style={{flex:1,padding:12,border:"1.5px solid var(--border)",borderRadius:13,color:"var(--muted)",fontSize:13,background:"transparent"}}>Annuler</button>
+               <button onClick={add} style={{flex:2,padding:12,background:"var(--orange)",border:"none",borderRadius:13,color:"#fff",fontWeight:700,fontSize:14,fontFamily:"var(--font-d)"}}>Enregistrer ✓</button>
+             </div>
+           </div>
+         </div>
+       )}
+     </div>
+   );
+ }
+ 
+ /* ─── PROFILE ─── */
+ function ProfileView({profile,onSave}){
+   const [form,setForm]=useState(profile||{});
+   const [step,setStep]=useState(0);
+   const [saved,setSaved]=useState(false);
+   const set=k=>v=>setForm(f=>({...f,[k]:v}));
+   const score=profileScore(form);
++  const toggleContrainteTag=(tagId)=>{
++    setForm(f=>{
++      const current=f.contrainteTags||[];
++      const hasTag=current.includes(tagId);
++      return {...f,contrainteTags:hasTag?current.filter(x=>x!==tagId):[...current,tagId]};
++    });
++  };
+   const handleSave=()=>{
+     const tags=(form.contrainteTags||[]).map(id=>MEDIC.find(m=>m.id===id)?.n||id);
+     const final={...form,contraintes:[...tags,form.contraintesLibre||""].filter(Boolean).join(", ")};
+     saveProf(final);onSave(final);setSaved(true);setTimeout(()=>setSaved(false),2500);
+   };
+   const steps=[{t:"Identité",i:"👤"},{t:"Santé",i:"🏥"},{t:"Sport",i:"💪"},{t:"Objectif",i:"🎯"},{t:"Nutrition",i:"🥗"}];
+   return(
+     <div style={{height:"100%",display:"flex",flexDirection:"column",background:"var(--bg)",position:"relative"}}>
+       <div className="organic-bg"/>
+       <div style={{padding:"14px 18px 8px",position:"relative",zIndex:1}}>
+         <div style={{display:"flex",justifyContent:"space-between",alignItems:"center"}}>
+           <div style={{fontFamily:"var(--font-d)",fontWeight:800,fontSize:20}}>Mon <span style={{color:"var(--accent)"}}>Profil</span></div>
+           <div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:14,color:score>=80?"var(--accent)":score>=50?"#8a6200":"var(--orange)"}}>{score}% complet</div>
+         </div>
+         {/* Progress bar */}
+         <div style={{height:6,background:"var(--border)",borderRadius:3,marginTop:8,overflow:"hidden"}}>
+           <div style={{width:`${score}%`,height:"100%",background:`linear-gradient(90deg,${score>=80?"var(--accent)":score>=50?"#d4a017":"var(--orange)"},${score>=80?"var(--accent2)":score>=50?"#e9c46a":"var(--pink)"})`,borderRadius:3,transition:"width 0.8s cubic-bezier(0.16,1,0.3,1)"}}/>
+         </div>
+       </div>
+       <div style={{display:"flex",gap:5,padding:"8px 16px 12px",position:"relative",zIndex:1,overflowX:"auto"}}>
+         {steps.map((s,i)=><button key={i} onClick={()=>setStep(i)} style={{flexShrink:0,padding:"7px 10px",borderRadius:11,background:step===i?"var(--accent)":"var(--card)",color:step===i?"#fff":"var(--muted)",border:step===i?"none":"1.5px solid var(--border)",boxShadow:step===i?"0 2px 10px rgba(45,106,79,0.22)":"var(--shadow)",transition:"all 0.18s",minWidth:58}}><div style={{fontSize:15}}>{s.i}</div><div style={{fontSize:9,fontWeight:step===i?700:400,marginTop:2,fontFamily:"var(--font-d)"}}>{s.t}</div></button>)}
+       </div>
+       <div style={{flex:1,overflowY:"auto",padding:"0 18px",position:"relative",zIndex:1}}>
+         {step===0&&<div className="fade-up">
+           <Field label="Prénom"><FInput placeholder="Ton prénom" value={form.prenom||""} onChange={e=>set("prenom")(e.target.value)}/></Field>
+           <Field label="Sexe"><div style={{display:"flex",gap:8}}>{["Homme","Femme","Autre"].map(s=><Btn key={s} active={form.sexe===s} style={{flex:1,padding:"12px",borderRadius:13,fontSize:13}} onClick={()=>set("sexe")(s)}>{s}</Btn>)}</div></Field>
+           <Field label="Âge"><FInput type="number" placeholder="28" value={form.age||""} onChange={e=>set("age")(e.target.value)}/></Field>
+           <Field label="Origine / Ethnie" hint="Prédispositions génétiques et nutritionnelles"><FInput placeholder="Ex: Africaine, Asiatique, Européenne..." value={form.ethnie||""} onChange={e=>set("ethnie")(e.target.value)}/></Field>
+           <Field label="Mode de vie"><div style={{position:"relative"}}><select value={form.modVie||""} onChange={e=>set("modVie")(e.target.value)} style={{width:"100%",padding:"12px 15px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:form.modVie?"var(--text)":"var(--muted)",fontSize:14,paddingRight:34}}><option value="">Sélectionne...</option>{MODES_VIE.map(m=><option key={m} value={m}>{m}</option>)}</select><div style={{position:"absolute",right:12,top:"50%",transform:"translateY(-50%)",pointerEvents:"none",fontSize:11,color:"var(--muted)"}}>▾</div></div></Field>
+         </div>}
+         {step===1&&<div className="fade-up">
+           <div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:12}}>
+             <Field label="Taille (cm)"><FInput type="number" placeholder="175" value={form.taille||""} onChange={e=>set("taille")(e.target.value)}/></Field>
+             <Field label="Poids (kg)"><FInput type="number" placeholder="70" value={form.poids||""} onChange={e=>set("poids")(e.target.value)}/></Field>
+           </div>
+           {form.taille&&form.poids&&(()=>{const bmi=(form.poids/((form.taille/100)**2)).toFixed(1);const c=bmi<18.5?"#52b788":bmi<25?"#2d6a4f":bmi<30?"#d4a017":"#e76f51";const l=bmi<18.5?"Maigreur":bmi<25?"Normal":bmi<30?"Surpoids":"Obésité";return<div style={{background:`${c}10`,border:`1px solid ${c}25`,borderRadius:11,padding:"9px 13px",marginBottom:14,display:"flex",justifyContent:"space-between"}}><span style={{fontSize:12,color:"var(--muted)"}}>IMC</span><span style={{fontFamily:"var(--font-d)",fontWeight:700,color:c,fontSize:14}}>{bmi} — {l}</span></div>;})()}
+           <Field label="Blessures & limitations" hint="Le coach adapte tous les exercices"><textarea value={form.blessures||""} onChange={e=>set("blessures")(e.target.value)} rows={3} placeholder="Ex: Genou droit opéré 2022, hernie L4-L5..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
+           <Field label="⚠️ Contraintes médicales" hint="Chaque séance sera adaptée">
+-            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>setForm(f=>({...f,contrainteTags:a?(f.contrainteTags||[]).filter(x=>x!==tag.id):[...(f.contrainteTags||[]),tag.id]})))}>{tag.l}</Btn>;})}</div>
++            <div style={{display:"flex",flexWrap:"wrap",gap:7,marginBottom:9}}>{MEDIC.map(tag=>{const a=(form.contrainteTags||[]).includes(tag.id);return<Btn key={tag.id} active={a} color={tag.c} onClick={()=>toggleContrainteTag(tag.id)}>{tag.l}</Btn>;})}</div>
+             <textarea value={form.contraintesLibre||""} onChange={e=>setForm(f=>({...f,contraintesLibre:e.target.value}))} rows={2} placeholder="Autres : thyroïde, grossesse, cancer..." style={{width:"100%",padding:"11px 13px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:12,lineHeight:1.6}}/>
+             {((form.contrainteTags||[]).length>0||form.contraintesLibre)&&<div style={{marginTop:7,padding:"7px 11px",background:"rgba(212,160,23,0.08)",borderRadius:9,border:"1px solid rgba(212,160,23,0.18)",fontSize:11,color:"#8a6200"}}>✅ Profil médical actif</div>}
+           </Field>
+         </div>}
+         {step===2&&<div className="fade-up">
+           <Field label="Niveau sportif"><div style={{display:"flex",flexDirection:"column",gap:7}}>{NIVEAUX.map(n=><button key={n} onClick={()=>set("niveau")(n)} style={{padding:"11px 15px",borderRadius:13,border:`1.5px solid ${form.niveau===n?"var(--accent)":"var(--border)"}`,background:form.niveau===n?"rgba(45,106,79,0.06)":"var(--bg)",color:form.niveau===n?"var(--accent)":"var(--text)",fontSize:13,fontWeight:form.niveau===n?600:400,textAlign:"left",transition:"all 0.18s"}}>{n}</button>)}</div></Field>
+           <Field label="Équipement (multi-sélection)"><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{EQUIPEMENTS.map(e=>{const s=(form.equipement||"").includes(e);return<Btn key={e} active={s} onClick={()=>{const cur=form.equipement?form.equipement.split(", ").filter(Boolean):[];set("equipement")(s?cur.filter(x=>x!==e).join(", "):[...cur,e].join(", "));}}>{e}</Btn>;})}</div></Field>
+         </div>}
+         {step===3&&<div className="fade-up">
+           <Field label="Objectif principal"><div style={{display:"grid",gridTemplateColumns:"1fr 1fr",gap:8}}>{OBJECTIFS.map(o=><button key={o.id} onClick={()=>set("objectif")(o.label)} style={{padding:"12px 10px",borderRadius:15,border:`1.5px solid ${form.objectif===o.label?"var(--accent)":"var(--border)"}`,background:form.objectif===o.label?"rgba(45,106,79,0.06)":"var(--bg)",textAlign:"left",transition:"all 0.18s"}}><div style={{fontSize:18,marginBottom:3}}>{o.label.split(" ")[0]}</div><div style={{fontFamily:"var(--font-d)",fontWeight:700,fontSize:11,color:form.objectif===o.label?"var(--accent)":"var(--text)"}}>{o.label.split(" ").slice(1).join(" ")}</div><div style={{fontSize:10,color:"var(--muted)"}}>{o.sub}</div></button>)}</div></Field>
+           {form.objectif?.includes("Événement")&&<><Field label="Événement"><FInput placeholder="Mariage, compét..." value={form.evenement||""} onChange={e=>set("evenement")(e.target.value)}/></Field><Field label="Date"><FInput type="date" value={form.dateEvenement||""} onChange={e=>set("dateEvenement")(e.target.value)}/></Field></>}
+           <Field label="Précisions"><textarea value={form.objectifDetail||""} onChange={e=>set("objectifDetail")(e.target.value)} rows={3} placeholder="Ex: Perdre 8kg avant l'été..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
+         </div>}
+         {step===4&&<div className="fade-up">
+           <Field label="Régime alimentaire"><div style={{display:"flex",flexWrap:"wrap",gap:7}}>{REGIMES.map(r=><Btn key={r} active={form.regime===r} onClick={()=>set("regime")(r)}>{r}</Btn>)}</div></Field>
+           <Field label="Allergies / intolérances"><FInput placeholder="Arachides, lactose..." value={form.allergies||""} onChange={e=>set("allergies")(e.target.value)}/></Field>
+           <Field label="Résultats biologiques" hint="Pour une nutrition sur-mesure"><textarea value={form.bilanSanguin||""} onChange={e=>set("bilanSanguin")(e.target.value)} rows={4} placeholder="Ferritine, Vit D, TSH, glycémie..." style={{width:"100%",padding:"12px",background:"var(--bg)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:13,lineHeight:1.6}}/></Field>
+         </div>}
+         <div style={{height:100}}/>
+       </div>
+       <div style={{padding:"10px 18px 16px",borderTop:"1px solid var(--border)",background:"rgba(245,242,236,0.97)",backdropFilter:"blur(12px)",position:"relative",zIndex:1}}>
+         <div style={{display:"flex",gap:8,marginBottom:8}}>
+           {step>0&&<button onClick={()=>setStep(s=>s-1)} style={{flex:1,padding:12,border:"1.5px solid var(--border)",borderRadius:13,color:"var(--muted)",fontSize:13,background:"transparent"}}>← Retour</button>}
+           {step<4?<button onClick={()=>setStep(s=>s+1)} style={{flex:2,padding:12,background:"var(--card)",border:"1.5px solid var(--border)",borderRadius:13,color:"var(--text)",fontSize:14,fontWeight:600,boxShadow:"var(--shadow)"}}>Suivant →</button>
+           :<button onClick={handleSave} style={{flex:2,padding:12,background:"var(--accent)",border:"none",borderRadius:13,color:"#fff",fontWeight:700,fontSize:15,fontFamily:"var(--font-d)",display:"flex",alignItems:"center",justifyContent:"center",gap:6,boxShadow:"0 3px 14px rgba(45,106,79,0.3)"}}>{saved?"✅ Sauvegardé !":"Sauvegarder ✓"}</button>}
+ 
+EOF
+)
